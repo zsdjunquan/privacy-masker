@@ -68,8 +68,6 @@
                     Content="本机显示遮罩"
                     IsChecked="True"
                     Margin="0,12,0,0"
-                    Checked="ShowLocalMaskCheckBox_Changed"
-                    Unchecked="ShowLocalMaskCheckBox_Changed"
                     Foreground="{StaticResource TextBrush}" />
           <Button x:Name="SafeShareButton"
                   Content="打开安全共享窗口"

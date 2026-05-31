@@ -22,6 +22,10 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+
+        // Bind after XAML loading so the initial IsChecked value cannot fire before all controls exist.
+        ShowLocalMaskCheckBox.Checked += ShowLocalMaskCheckBox_Changed;
+        ShowLocalMaskCheckBox.Unchecked += ShowLocalMaskCheckBox_Changed;
         ProtectedWindowsList.ItemsSource = _protectedWindows;
 
         _scanTimer = new DispatcherTimer
@@ -165,9 +169,12 @@ public partial class MainWindow : Window
             ? System.Windows.Media.Brushes.DarkSlateGray
             : (System.Windows.Media.Brush)FindResource("AccentBrush");
         ProtectedCountText.Text = $"{_protectedWindows.Count} 个";
-        SafeShareButton.Content = _safeShareWindow is { IsVisible: true }
-            ? "显示安全共享窗口"
-            : "打开安全共享窗口";
+        if (SafeShareButton is not null)
+        {
+            SafeShareButton.Content = _safeShareWindow is { IsVisible: true }
+                ? "显示安全共享窗口"
+                : "打开安全共享窗口";
+        }
         _trayController?.Update(_isProtectionEnabled);
     }
 
