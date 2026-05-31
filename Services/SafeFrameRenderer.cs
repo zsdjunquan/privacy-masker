@@ -33,11 +33,11 @@ public sealed class SafeFrameRenderer
         graphics.SmoothingMode = SmoothingMode.HighQuality;
         graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
 
-        using var maskBrush = new SolidBrush(Color.FromArgb(232, 24, 32, 42));
+        var settings = MaskSettingsStore.Load();
         using var borderPen = new Pen(Color.FromArgb(220, 46, 125, 107), 3);
         using var textBrush = new SolidBrush(Color.White);
         using var smallTextBrush = new SolidBrush(Color.FromArgb(220, 225, 232, 238));
-        using var titleFont = new Font("Microsoft YaHei UI", 24, FontStyle.Bold, GraphicsUnit.Pixel);
+        using var titleFont = new Font("Microsoft YaHei UI", 36, FontStyle.Bold, GraphicsUnit.Pixel);
         using var subtitleFont = new Font("Microsoft YaHei UI", 14, FontStyle.Regular, GraphicsUnit.Pixel);
 
         foreach (var window in windows)
@@ -48,10 +48,73 @@ public sealed class SafeFrameRenderer
                 continue;
             }
 
-            graphics.FillRectangle(maskBrush, mask);
+            var drewCustomAsset = settings.MaskKind == "custom" &&
+                MaskAssetProvider.Shared.Draw(graphics, mask, (float)settings.Opacity);
+            if (!drewCustomAsset)
+            {
+                DrawPresetMask(graphics, mask, settings);
+            }
+
             graphics.DrawRectangle(borderPen, mask);
-            DrawCenteredText(graphics, mask, window, titleFont, subtitleFont, textBrush, smallTextBrush);
+            if (!drewCustomAsset)
+            {
+                DrawCenteredText(graphics, mask, settings, window, titleFont, subtitleFont, textBrush, smallTextBrush);
+            }
         }
+    }
+
+    private static void DrawPresetMask(Graphics graphics, Rectangle mask, MaskSettings settings)
+    {
+        switch (settings.PresetId)
+        {
+            case "pink":
+                using (var brush = new LinearGradientBrush(mask, Color.FromArgb(238, 255, 220, 232), Color.FromArgb(238, 255, 247, 210), 35f))
+                {
+                    graphics.FillRectangle(brush, mask);
+                }
+                DrawDots(graphics, mask, Color.FromArgb(120, 255, 142, 165));
+                break;
+            case "blue":
+                using (var brush = new LinearGradientBrush(mask, Color.FromArgb(238, 23, 53, 88), Color.FromArgb(238, 36, 120, 128), 25f))
+                {
+                    graphics.FillRectangle(brush, mask);
+                }
+                DrawDots(graphics, mask, Color.FromArgb(100, 148, 217, 232));
+                break;
+            case "warning":
+                using (var brush = new SolidBrush(Color.FromArgb(238, 31, 31, 31)))
+                using (var stripeBrush = new SolidBrush(Color.FromArgb(80, 255, 190, 70)))
+                {
+                    graphics.FillRectangle(brush, mask);
+                    for (var x = mask.Left - mask.Height; x < mask.Right; x += 72)
+                    {
+                        var points = new[]
+                        {
+                            new Point(x, mask.Bottom),
+                            new Point(x + 32, mask.Bottom),
+                            new Point(x + mask.Height + 32, mask.Top),
+                            new Point(x + mask.Height, mask.Top)
+                        };
+                        graphics.FillPolygon(stripeBrush, points);
+                    }
+                }
+                break;
+            default:
+                using (var brush = new SolidBrush(Color.FromArgb(232, 24, 32, 42)))
+                {
+                    graphics.FillRectangle(brush, mask);
+                }
+                break;
+        }
+    }
+
+    private static void DrawDots(Graphics graphics, Rectangle mask, Color color)
+    {
+        using var brush = new SolidBrush(color);
+        var size = Math.Max(8, Math.Min(mask.Width, mask.Height) / 18);
+        graphics.FillEllipse(brush, mask.Left + mask.Width / 10, mask.Top + mask.Height / 8, size, size);
+        graphics.FillEllipse(brush, mask.Right - mask.Width / 6, mask.Top + mask.Height / 5, size + 6, size + 6);
+        graphics.FillEllipse(brush, mask.Left + mask.Width / 5, mask.Bottom - mask.Height / 5, size + 3, size + 3);
     }
 
     private static Rectangle ToFrameRectangle(System.Windows.Rect windowBounds, Rectangle screenBounds)
@@ -67,6 +130,7 @@ public sealed class SafeFrameRenderer
     private static void DrawCenteredText(
         Graphics graphics,
         Rectangle mask,
+        MaskSettings settings,
         WindowSnapshot window,
         Font titleFont,
         Font subtitleFont,
@@ -78,7 +142,7 @@ public sealed class SafeFrameRenderer
             return;
         }
 
-        const string title = "隐私遮罩";
+        var title = string.IsNullOrWhiteSpace(settings.Message) ? "不可以偷看哦" : settings.Message;
         var subtitle = window.ProcessName;
         var titleSize = graphics.MeasureString(title, titleFont);
         var subtitleSize = graphics.MeasureString(subtitle, subtitleFont);
