@@ -3,9 +3,9 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="Privacy Masker"
         Width="520"
-        Height="460"
+        Height="520"
         MinWidth="480"
-        MinHeight="420"
+        MinHeight="500"
         Background="#F4F6F8"
         WindowStartupLocation="CenterScreen">
   <Grid Margin="24">
@@ -71,6 +71,16 @@
                     Checked="ShowLocalMaskCheckBox_Changed"
                     Unchecked="ShowLocalMaskCheckBox_Changed"
                     Foreground="{StaticResource TextBrush}" />
+          <Button x:Name="SafeShareButton"
+                  Content="打开安全共享窗口"
+                  Width="150"
+                  Height="32"
+                  HorizontalAlignment="Left"
+                  Margin="0,12,0,0"
+                  Click="SafeShareButton_Click"
+                  Background="#18202A"
+                  Foreground="White"
+                  BorderThickness="0" />
         </StackPanel>
         <Button x:Name="ToggleButton"
                 Grid.Column="1"
@@ -139,6 +149,6 @@
                Margin="0,14,0,0"
                Foreground="{StaticResource MutedTextBrush}"
                TextWrapping="Wrap"
-               Text="V0.1 原型：普通桌面共享时，对方看到的内容与本机屏幕一致。若关闭本机遮罩，普通桌面共享里也不会出现遮罩；真正的“本机无遮罩、对方有遮罩”需要安全共享窗口或虚拟屏幕方案。" />
+               Text="V0.2 原型：会议里请选择共享“Privacy Masker - 安全共享窗口”。普通桌面共享仍然会展示本机实际画面。" />
   </Grid>
 </Window>

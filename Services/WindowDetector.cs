@@ -43,10 +43,12 @@ public sealed class WindowDetector
             }
 
             var scale = NativeMethods.GetScaleForWindow(hWnd);
+            var pixelWidth = rect.Right - rect.Left;
+            var pixelHeight = rect.Bottom - rect.Top;
             var left = rect.Left / scale;
             var top = rect.Top / scale;
-            var width = (rect.Right - rect.Left) / scale;
-            var height = (rect.Bottom - rect.Top) / scale;
+            var width = pixelWidth / scale;
+            var height = pixelHeight / scale;
 
             if (width < 80 || height < 60 || left <= -30000 || top <= -30000)
             {
@@ -58,7 +60,8 @@ public sealed class WindowDetector
                 hWnd,
                 title,
                 processName,
-                new Rect(left, top, width, height)));
+                new Rect(left, top, width, height),
+                new Rect(rect.Left, rect.Top, pixelWidth, pixelHeight)));
 
             return true;
         }, IntPtr.Zero);

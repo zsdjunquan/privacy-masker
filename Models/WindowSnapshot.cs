@@ -6,4 +6,5 @@ public sealed record WindowSnapshot(
     IntPtr Handle,
     string Title,
     string ProcessName,
-    Rect Bounds);
+    Rect Bounds,
+    Rect PixelBounds);

@@ -85,6 +85,10 @@ internal static class NativeMethods
     [DllImport("user32.dll")]
     private static extern bool SetProcessDPIAware();
 
+    [DllImport("gdi32.dll")]
+    [return: MarshalAs(UnmanagedType.Bool)]
+    public static extern bool DeleteObject(IntPtr hObject);
+
     public static string GetWindowTitle(IntPtr hWnd)
     {
         var length = GetWindowTextLengthW(hWnd);

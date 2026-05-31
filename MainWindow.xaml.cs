@@ -15,6 +15,7 @@ public partial class MainWindow : Window
     private readonly OverlayManager _overlayManager = new();
     private HotkeyManager? _hotkeyManager;
     private TrayController? _trayController;
+    private SafeShareWindow? _safeShareWindow;
     private bool _isProtectionEnabled;
     private bool _showLocalMask = true;
 
@@ -50,6 +51,7 @@ public partial class MainWindow : Window
     {
         _scanTimer.Stop();
         _overlayManager.Clear();
+        _safeShareWindow?.Close();
         _hotkeyManager?.Dispose();
         _trayController?.Dispose();
     }
@@ -77,6 +79,27 @@ public partial class MainWindow : Window
         }
 
         RefreshProtection();
+        UpdateStatus();
+    }
+
+    private void SafeShareButton_Click(object sender, RoutedEventArgs e)
+    {
+        if (_safeShareWindow is { IsVisible: true })
+        {
+            _safeShareWindow.Activate();
+            return;
+        }
+
+        _safeShareWindow = new SafeShareWindow
+        {
+            Owner = this
+        };
+        _safeShareWindow.Closed += (_, _) =>
+        {
+            _safeShareWindow = null;
+            UpdateStatus();
+        };
+        _safeShareWindow.Show();
         UpdateStatus();
     }
 
@@ -142,6 +165,9 @@ public partial class MainWindow : Window
             ? System.Windows.Media.Brushes.DarkSlateGray
             : (System.Windows.Media.Brush)FindResource("AccentBrush");
         ProtectedCountText.Text = $"{_protectedWindows.Count} 个";
+        SafeShareButton.Content = _safeShareWindow is { IsVisible: true }
+            ? "显示安全共享窗口"
+            : "打开安全共享窗口";
         _trayController?.Update(_isProtectionEnabled);
     }
 
