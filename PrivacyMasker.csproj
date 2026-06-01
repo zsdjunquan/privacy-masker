@@ -8,5 +8,10 @@
     <UseWindowsForms>true</UseWindowsForms>
     <AssemblyName>PrivacyMasker</AssemblyName>
     <RootNamespace>PrivacyMasker</RootNamespace>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <SelfContained>true</SelfContained>
+    <PublishSingleFile>true</PublishSingleFile>
+    <PublishReadyToRun>false</PublishReadyToRun>
+    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
   </PropertyGroup>
 </Project>

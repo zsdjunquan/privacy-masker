@@ -56,12 +56,15 @@ public sealed class WindowDetector
             }
 
             var processName = GetProcessName((int)processId);
+            var bounds = new Rect(left, top, width, height);
+            var pixelBounds = new Rect(rect.Left, rect.Top, pixelWidth, pixelHeight);
+
             windows.Add(new WindowSnapshot(
                 hWnd,
                 title,
                 processName,
-                new Rect(left, top, width, height),
-                new Rect(rect.Left, rect.Top, pixelWidth, pixelHeight)));
+                bounds,
+                pixelBounds));
 
             return true;
         }, IntPtr.Zero);

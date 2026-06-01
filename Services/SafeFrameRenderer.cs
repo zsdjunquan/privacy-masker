@@ -12,7 +12,7 @@ public sealed class SafeFrameRenderer
     private readonly WindowDetector _windowDetector = new();
     private readonly AppRuleEngine _ruleEngine = new();
 
-    public BitmapSource Render(out int protectedWindowCount)
+    public BitmapSource Render(out int protectedWindowCount, IReadOnlyCollection<System.Windows.Rect>? excludedPixelBounds = null)
     {
         using var frame = _screenCaptureService.CapturePrimaryScreen();
         var screenBounds = _screenCaptureService.PrimaryScreenBounds;
@@ -22,16 +22,22 @@ public sealed class SafeFrameRenderer
             .ToList();
 
         protectedWindowCount = protectedWindows.Count;
-        DrawMasks(frame, screenBounds, protectedWindows);
+        DrawMasks(frame, screenBounds, protectedWindows, excludedPixelBounds ?? []);
 
         return ScreenCaptureService.ToBitmapSource(frame);
     }
 
-    private static void DrawMasks(Bitmap frame, Rectangle screenBounds, IReadOnlyCollection<WindowSnapshot> windows)
+    private static void DrawMasks(
+        Bitmap frame,
+        Rectangle screenBounds,
+        IReadOnlyCollection<WindowSnapshot> windows,
+        IReadOnlyCollection<System.Windows.Rect> excludedPixelBounds)
     {
         using var graphics = Graphics.FromImage(frame);
         graphics.SmoothingMode = SmoothingMode.HighQuality;
         graphics.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+
+        DrawExcludedRegions(graphics, screenBounds, excludedPixelBounds);
 
         var settings = MaskSettingsStore.Load();
         using var borderPen = new Pen(Color.FromArgb(220, 46, 125, 107), 3);
@@ -59,6 +65,46 @@ public sealed class SafeFrameRenderer
             if (!drewCustomAsset)
             {
                 DrawCenteredText(graphics, mask, settings, window, titleFont, subtitleFont, textBrush, smallTextBrush);
+            }
+        }
+    }
+
+    private static void DrawExcludedRegions(
+        Graphics graphics,
+        Rectangle screenBounds,
+        IReadOnlyCollection<System.Windows.Rect> excludedPixelBounds)
+    {
+        if (excludedPixelBounds.Count == 0)
+        {
+            return;
+        }
+
+        using var brush = new SolidBrush(Color.FromArgb(255, 12, 16, 20));
+        using var borderPen = new Pen(Color.FromArgb(160, 46, 125, 107), 2);
+        using var textBrush = new SolidBrush(Color.FromArgb(220, 225, 232, 238));
+        using var font = new Font("Microsoft YaHei UI", 16, FontStyle.Bold, GraphicsUnit.Pixel);
+
+        foreach (var bounds in excludedPixelBounds)
+        {
+            var region = ToFrameRectangle(bounds, screenBounds);
+            if (region.Width <= 0 || region.Height <= 0)
+            {
+                continue;
+            }
+
+            graphics.FillRectangle(brush, region);
+            graphics.DrawRectangle(borderPen, region);
+
+            if (region.Width >= 220 && region.Height >= 80)
+            {
+                const string text = "共享窗口预览已隐藏";
+                var textSize = graphics.MeasureString(text, font);
+                graphics.DrawString(
+                    text,
+                    font,
+                    textBrush,
+                    region.Left + (region.Width - textSize.Width) / 2f,
+                    region.Top + (region.Height - textSize.Height) / 2f);
             }
         }
     }

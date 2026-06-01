@@ -1,13 +1,13 @@
 @echo off
 setlocal
 set "DOTNET_EXE=%USERPROFILE%\.dotnet\dotnet.exe"
-set "APP_DLL=%~dp0bin\Debug\net8.0-windows\PrivacyMasker.dll"
+set "APP_EXE=%~dp0bin\Release\net8.0-windows\win-x64\publish\PrivacyMasker.exe"
 
-rem Use the per-user .NET install so the app works even when the system runtime is not installed globally.
+rem Publish a self-contained WinExe so launching the helper does not leave a console window open.
 if not exist "%DOTNET_EXE%" (
   echo .NET SDK was not found at "%DOTNET_EXE%".
   echo Please install .NET 8 SDK first.
   exit /b 1
 )
-"%DOTNET_EXE%" build "%~dp0PrivacyMasker.csproj" || exit /b 1
-start "" "%DOTNET_EXE%" "%APP_DLL%"
+"%DOTNET_EXE%" publish "%~dp0PrivacyMasker.csproj" -c Release || exit /b 1
+start "" "%APP_EXE%"

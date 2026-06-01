@@ -1,4 +1,5 @@
 using System.Windows;
+using System.Windows.Interop;
 using System.Windows.Threading;
 using PrivacyMasker.Services;
 using FormsScreen = System.Windows.Forms.Screen;
@@ -46,7 +47,7 @@ public partial class SafeShareWindow : Window
     {
         try
         {
-            PreviewImage.Source = _renderer.Render(out var protectedWindowCount);
+            PreviewImage.Source = _renderer.Render(out var protectedWindowCount, GetExcludedWindowBounds());
             StatusText.Text = protectedWindowCount > 0
                 ? $"安全共享中，已遮罩 {protectedWindowCount} 个窗口"
                 : "安全共享中";
@@ -54,6 +55,38 @@ public partial class SafeShareWindow : Window
         catch (Exception ex)
         {
             StatusText.Text = $"采集失败：{ex.Message}";
+        }
+    }
+
+    private IReadOnlyCollection<Rect> GetExcludedWindowBounds()
+    {
+        var bounds = new List<Rect>();
+        AddWindowBounds(this, bounds);
+
+        if (Owner is not null)
+        {
+            AddWindowBounds(Owner, bounds);
+        }
+
+        return bounds;
+    }
+
+    private static void AddWindowBounds(Window window, ICollection<Rect> bounds)
+    {
+        if (!window.IsVisible || window.WindowState == WindowState.Minimized)
+        {
+            return;
+        }
+
+        var handle = new WindowInteropHelper(window).Handle;
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        if (NativeMethods.TryGetVisibleWindowBounds(handle, out var rect))
+        {
+            bounds.Add(new Rect(rect.Left, rect.Top, rect.Right - rect.Left, rect.Bottom - rect.Top));
         }
     }
 

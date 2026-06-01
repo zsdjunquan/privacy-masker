@@ -18,10 +18,15 @@ public partial class OverlayWindow : Window
 
     public void UpdateFor(WindowSnapshot target)
     {
-        Left = target.Bounds.Left;
-        Top = target.Bounds.Top;
-        Width = target.Bounds.Width;
-        Height = target.Bounds.Height;
+        UpdateFor(target, target.Bounds);
+    }
+
+    public void UpdateFor(WindowSnapshot target, Rect bounds)
+    {
+        Left = bounds.Left;
+        Top = bounds.Top;
+        Width = bounds.Width;
+        Height = bounds.Height;
         WindowTitleText.Text = target.Title;
         ApplyMaskAsset();
 

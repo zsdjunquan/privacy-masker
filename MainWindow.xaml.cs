@@ -53,7 +53,6 @@ public partial class MainWindow : Window
 
         Loaded += MainWindow_Loaded;
         Closing += MainWindow_Closing;
-        StateChanged += MainWindow_StateChanged;
     }
 
     private void MainWindow_Loaded(object sender, RoutedEventArgs e)
@@ -75,14 +74,6 @@ public partial class MainWindow : Window
         _safeShareWindow?.Close();
         _hotkeyManager?.Dispose();
         _trayController?.Dispose();
-    }
-
-    private void MainWindow_StateChanged(object? sender, EventArgs e)
-    {
-        if (WindowState == WindowState.Minimized)
-        {
-            Hide();
-        }
     }
 
     private void ToggleButton_Click(object sender, RoutedEventArgs e)
