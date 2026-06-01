@@ -6,10 +6,12 @@ namespace PrivacyMasker.Services;
 
 public static class MaskSettingsStore
 {
+    private static readonly object SyncRoot = new();
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
         WriteIndented = true
     };
+    private static MaskSettings? CachedSettings;
 
     public static event EventHandler? SettingsChanged;
 
@@ -20,26 +22,49 @@ public static class MaskSettingsStore
 
     public static MaskSettings Load()
     {
-        try
+        lock (SyncRoot)
         {
-            if (!File.Exists(SettingsPath))
+            if (CachedSettings is not null)
             {
-                return new MaskSettings();
+                return Copy(CachedSettings);
             }
 
-            var json = File.ReadAllText(SettingsPath);
-            return JsonSerializer.Deserialize<MaskSettings>(json) ?? new MaskSettings();
-        }
-        catch
-        {
-            return new MaskSettings();
+            try
+            {
+                CachedSettings = File.Exists(SettingsPath)
+                    ? JsonSerializer.Deserialize<MaskSettings>(File.ReadAllText(SettingsPath)) ?? new MaskSettings()
+                    : new MaskSettings();
+            }
+            catch
+            {
+                CachedSettings = new MaskSettings();
+            }
+
+            return Copy(CachedSettings);
         }
     }
 
     public static void Save(MaskSettings settings)
     {
-        Directory.CreateDirectory(SettingsDirectory);
-        File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings, JsonOptions));
+        lock (SyncRoot)
+        {
+            CachedSettings = Copy(settings);
+            Directory.CreateDirectory(SettingsDirectory);
+            File.WriteAllText(SettingsPath, JsonSerializer.Serialize(settings, JsonOptions));
+        }
+
         SettingsChanged?.Invoke(null, EventArgs.Empty);
+    }
+
+    private static MaskSettings Copy(MaskSettings settings)
+    {
+        return new MaskSettings
+        {
+            MaskKind = settings.MaskKind,
+            PresetId = settings.PresetId,
+            Message = settings.Message,
+            AssetPath = settings.AssetPath,
+            Opacity = settings.Opacity
+        };
     }
 }

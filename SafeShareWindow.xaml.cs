@@ -10,6 +10,8 @@ public partial class SafeShareWindow : Window
 {
     private readonly DispatcherTimer _frameTimer;
     private readonly SafeFrameRenderer _renderer = new();
+    private bool _isRenderingFrame;
+    private bool _isClosing;
 
     public SafeShareWindow()
     {
@@ -17,7 +19,7 @@ public partial class SafeShareWindow : Window
 
         _frameTimer = new DispatcherTimer
         {
-            Interval = TimeSpan.FromMilliseconds(100)
+            Interval = TimeSpan.FromMilliseconds(33)
         };
         _frameTimer.Tick += (_, _) => RenderFrame();
 
@@ -35,6 +37,7 @@ public partial class SafeShareWindow : Window
 
     private void SafeShareWindow_Closing(object? sender, System.ComponentModel.CancelEventArgs e)
     {
+        _isClosing = true;
         _frameTimer.Stop();
     }
 
@@ -45,17 +48,48 @@ public partial class SafeShareWindow : Window
 
     private void RenderFrame()
     {
-        try
+        if (_isRenderingFrame || _isClosing || WindowState == WindowState.Minimized)
         {
-            PreviewImage.Source = _renderer.Render(out var protectedWindowCount, GetExcludedWindowBounds());
-            StatusText.Text = protectedWindowCount > 0
-                ? $"安全共享中，已遮罩 {protectedWindowCount} 个窗口"
-                : "安全共享中";
+            return;
         }
-        catch (Exception ex)
+
+        _isRenderingFrame = true;
+
+        // 采集和遮罩绘制比较重，放到后台线程，避免拖动安全共享窗口时卡住界面。
+        var excludedWindowBounds = GetExcludedWindowBounds();
+        _ = Task.Run(() =>
         {
-            StatusText.Text = $"采集失败：{ex.Message}";
-        }
+            try
+            {
+                var frame = _renderer.Render(out var protectedWindowCount, excludedWindowBounds);
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (_isClosing)
+                    {
+                        return;
+                    }
+
+                    PreviewImage.Source = frame;
+                    StatusText.Text = protectedWindowCount > 0
+                        ? $"安全共享中，已遮罩 {protectedWindowCount} 个窗口，30 FPS"
+                        : "安全共享中，30 FPS";
+                });
+            }
+            catch (Exception ex)
+            {
+                Dispatcher.BeginInvoke(() =>
+                {
+                    if (!_isClosing)
+                    {
+                        StatusText.Text = $"采集失败：{ex.Message}";
+                    }
+                });
+            }
+            finally
+            {
+                Dispatcher.BeginInvoke(() => _isRenderingFrame = false);
+            }
+        });
     }
 
     private IReadOnlyCollection<Rect> GetExcludedWindowBounds()
@@ -92,13 +126,33 @@ public partial class SafeShareWindow : Window
 
     private void MoveToUsefulScreen()
     {
-        var targetScreen = FormsScreen.AllScreens.FirstOrDefault(screen => !screen.Primary)
+        var secondaryScreen = FormsScreen.AllScreens.FirstOrDefault(screen => !screen.Primary);
+        var targetScreen = secondaryScreen
             ?? FormsScreen.PrimaryScreen
             ?? FormsScreen.AllScreens.First();
 
-        Left = targetScreen.WorkingArea.Left + 40;
-        Top = targetScreen.WorkingArea.Top + 40;
-        Width = Math.Min(1120, Math.Max(720, targetScreen.WorkingArea.Width - 80));
-        Height = Math.Min(720, Math.Max(460, targetScreen.WorkingArea.Height - 80));
+        if (secondaryScreen is not null)
+        {
+            // 有第二块屏幕时，安全共享窗口铺满第二屏，减少会议软件二次缩放造成的模糊。
+            Left = targetScreen.WorkingArea.Left;
+            Top = targetScreen.WorkingArea.Top;
+            Width = targetScreen.WorkingArea.Width;
+            Height = targetScreen.WorkingArea.Height;
+            WindowState = WindowState.Maximized;
+            return;
+        }
+
+        // 单屏时保留操作空间，避免安全共享窗口把自己和主面板完全盖住。
+        var maxWidth = Math.Max(320, targetScreen.WorkingArea.Width - 40);
+        var maxHeight = Math.Max(240, targetScreen.WorkingArea.Height - 40);
+        var minWidth = Math.Min(720, maxWidth);
+        var minHeight = Math.Min(460, maxHeight);
+        var width = Math.Clamp(targetScreen.WorkingArea.Width - 120, minWidth, maxWidth);
+        var height = Math.Clamp(targetScreen.WorkingArea.Height - 120, minHeight, maxHeight);
+
+        Left = targetScreen.WorkingArea.Left + (targetScreen.WorkingArea.Width - width) / 2d;
+        Top = targetScreen.WorkingArea.Top + (targetScreen.WorkingArea.Height - height) / 2d;
+        Width = width;
+        Height = height;
     }
 }
